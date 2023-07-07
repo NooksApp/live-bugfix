@@ -13,7 +13,7 @@ interface IVideoPlayerProps {
 }
 
 interface IVideoControlProps {
-  type: "PLAY" | "PAUSE";
+  type: "PLAY" | "PAUSE" | "END";
   progress: number;
 }
 
