@@ -33,16 +33,6 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
   const player = useRef<ReactPlayer>(null);
   const [users, setUsers] = useState<Set<String>>(new Set());
 
-  const handleBeforeUnload = useCallback(
-    (event: BeforeUnloadEvent) => {
-      // If you are the last user then end the video, so it doesn't keep playing
-      if (users.size <= 1) {
-        Api.endSession(sessionId);
-      }
-    },
-    [users, sessionId]
-  );
-
   React.useEffect(() => {
     // join session on init
     socket.emit("joinSession", sessionId, (response: JoinSessionResponse) => {
@@ -50,10 +40,19 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
       setUrl(response.videoUrl);
       setUsers(new Set(response.users));
     });
+  }, []);
+
+  React.useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (users.size <= 1) {
+        Api.endSession(sessionId);
+      }
+    };
 
     // set up handler to end video when page closes
     window.addEventListener("beforeunload", handleBeforeUnload);
-  }, [handleBeforeUnload]);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [users, sessionId]);
 
   function playVideo() {
     player.current?.getInternalPlayer().playVideo();
