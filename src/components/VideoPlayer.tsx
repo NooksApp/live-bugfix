@@ -8,7 +8,6 @@ const MIN_VIDEO_PROGRESS = 0;
 const MAX_VIDEO_PROGRESS = 0.999999;
 
 interface IVideoPlayerProps {
-  url: string;
   sessionId: string;
   socket: Socket;
 }
@@ -18,11 +17,13 @@ interface IVideoControlProps {
   progress: number;
 }
 
-const VideoPlayer: React.FC<IVideoPlayerProps> = ({
-  url,
-  socket,
-  sessionId,
-}) => {
+interface JoinSessionResponse {
+  videoUrl: string;
+  users: String[];
+}
+
+const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
+  const [url, setUrl] = useState<string | null>(null);
   const [hasJoined, setHasJoined] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [playingVideo, setPlayingVideo] = useState(false);
@@ -34,14 +35,19 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({
 
   const handleBeforeUnload = useCallback(
     (event: BeforeUnloadEvent) => {
-      if (users.size <= 1) Api.endVideo(sessionId);
+      // If you are the last user then end the video, so it doesn't keep playing
+      if (users.size <= 1) {
+        Api.endSession(sessionId);
+      }
     },
     [users, sessionId]
   );
 
   React.useEffect(() => {
     // join session on init
-    socket.emit("joinSession", sessionId, (response: { users: String[] }) => {
+    socket.emit("joinSession", sessionId, (response: JoinSessionResponse) => {
+      console.log("Response after joining session: ", response);
+      setUrl(response.videoUrl);
       setUsers(new Set(response.users));
     });
 
@@ -124,10 +130,11 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({
   };
 
   const handleWatchStart = async () => {
-    const lastVideoEvent = await Api.getLastVideoControl(sessionId);
+    const lastVideoEvent = await Api.getLastVideoEvent(sessionId);
 
+    // When joining late to the party
     if (lastVideoEvent.type === "PLAY") {
-      // Need to calculate how much time has elapsed from when the "PLAY" event has fired
+      // Need to calculate how much time has elapsed since "PLAY" event fired
       // to know where to start the video at
       const newVideoProgress = Math.min(
         MAX_VIDEO_PROGRESS,
@@ -140,8 +147,8 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({
     } else if (lastVideoEvent.type === "PAUSE") {
       pauseVideoAtProgress(lastVideoEvent.progress);
       setPlayed(lastVideoEvent.progress);
-    } else if (lastVideoEvent.type === "END") {
-      // the video has ended, can start
+    } else {
+      // no video events yet or session was ended, just start video normally from beginning
       handlePlayPause();
     }
 
@@ -185,43 +192,45 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({
       justifyContent="center"
       flexDirection="column"
     >
-      <Box
-        width="100%"
-        height="100%"
-        display={hasJoined ? "flex" : "none"}
-        flexDirection="column"
-      >
-        <ReactPlayer
-          ref={player}
-          url={url}
-          playing={false}
-          controls={false}
-          onReady={handleReady}
-          onProgress={handleProgress}
+      {url && (
+        <Box
           width="100%"
           height="100%"
-          style={{ pointerEvents: "none" }}
-        />
-        <div>
-          <button
-            style={{ display: "block" }}
-            onClick={() => handlePlayPause()}
-          >
-            {playingVideo ? "Pause" : "Play"}
-          </button>
-          <input
-            style={{ display: "block", width: "100%" }}
-            type="range"
-            min={MIN_VIDEO_PROGRESS}
-            max={MAX_VIDEO_PROGRESS}
-            step="any"
-            value={played}
-            onMouseDown={() => handleSeekMouseDown()}
-            onChange={(e) => handleSeekChange(e)}
-            onMouseUp={(e) => handleSeekMouseUp(e)}
+          display={hasJoined ? "flex" : "none"}
+          flexDirection="column"
+        >
+          <ReactPlayer
+            ref={player}
+            url={url}
+            playing={false}
+            controls={false}
+            onReady={handleReady}
+            onProgress={handleProgress}
+            width="100%"
+            height="100%"
+            style={{ pointerEvents: "none" }}
           />
-        </div>
-      </Box>
+          <div>
+            <button
+              style={{ display: "block" }}
+              onClick={() => handlePlayPause()}
+            >
+              {playingVideo ? "Pause" : "Play"}
+            </button>
+            <input
+              style={{ display: "block", width: "100%" }}
+              type="range"
+              min={MIN_VIDEO_PROGRESS}
+              max={MAX_VIDEO_PROGRESS}
+              step="any"
+              value={played}
+              onMouseDown={() => handleSeekMouseDown()}
+              onChange={(e) => handleSeekChange(e)}
+              onMouseUp={(e) => handleSeekMouseUp(e)}
+            />
+          </div>
+        </Box>
+      )}
       {!hasJoined && isReady && (
         // Youtube doesn't allow autoplay unless you've interacted with the page already
         // So we make the user click "Join Session" button and then start playing the video immediately after

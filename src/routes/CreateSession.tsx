@@ -11,7 +11,7 @@ const CreateSession: React.FC = () => {
   const createSession = async () => {
     // setNewUrl("");
     const sessionId = uuidv4();
-    await Api.createVideo(sessionId, newUrl);
+    await Api.createSession(sessionId, newUrl);
     navigate(`/watch/${sessionId}`);
   };
 

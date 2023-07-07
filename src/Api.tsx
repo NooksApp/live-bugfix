@@ -18,54 +18,19 @@ export interface IVideo {
 }
 
 export interface IVideoControl {
-  id: number;
-  videoId: string;
   progress: number;
   type: "PLAY" | "PAUSE" | "END";
   // epoch in milisecond
   createdAt: number;
 }
 
-export const getVideo = async (videoId: string): Promise<IVideo> => {
-  try {
-    const response = await apiClient.get(`/video/${videoId}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error getting video:", error);
-    throw error;
-  }
-};
-
-export const createVideo = async (
-  videoId: string,
-  url: string
-): Promise<void> => {
-  try {
-    await apiClient.post("/video", { videoId, url });
-  } catch (error) {
-    console.error("Error creating video:", error);
-    throw error;
-  }
-};
-
-export const createVideoControl = async (
-  videoId: string,
-  type: string,
-  progress: number
-): Promise<void> => {
-  try {
-    await apiClient.post("/videoControl", { type, progress, videoId });
-  } catch (error) {
-    console.error("Error creating video control:", error);
-    throw error;
-  }
-};
-
-export const getLastVideoControl = async (
-  videoId: string
+export const getLastVideoEvent = async (
+  sessionId: string
 ): Promise<IVideoControl> => {
   try {
-    const response = await apiClient.get(`/videoControl/${videoId}`);
+    const response = await apiClient.get(
+      `/session/${sessionId}/lastVideoEvent`
+    );
     return response.data;
   } catch (error) {
     console.error("Error getting last video control:", error);
@@ -73,10 +38,22 @@ export const getLastVideoControl = async (
   }
 };
 
-export const endVideo = (videoId: string): void => {
+export const createSession = async (
+  sessionId: string,
+  url: string
+): Promise<void> => {
+  try {
+    await apiClient.post("/session", { sessionId, url });
+  } catch (error) {
+    console.error("Error creating video:", error);
+    throw error;
+  }
+};
+
+export const endSession = (sessionId: string): void => {
   try {
     // send a beacon - async request that doesn't expect a response
-    navigator.sendBeacon(`/video/${videoId}/end`);
+    navigator.sendBeacon(`/session/${sessionId}/end`);
   } catch (error) {
     console.error("Error ending video: ", error);
     throw error;
