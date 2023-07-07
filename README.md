@@ -2,7 +2,7 @@
 
 This is a simple implementation of a collaborative Youtube Watch Party, backed by a socket.io backend that broadcasts video.
 
-When a user creates a session via the `create` endpoint, they get a unique session ID and a shareable link that they can use to have other clients join that session. This unique session ID is used as a "room" in the socket server, where any messages sent by one client can be forwarded on to all other clients.
+When a user creates a session via the `/create` page, they get a unique session ID and a shareable link that they can use to have other clients join that session. This unique session ID is used as a "room" in the socket server, where any messages sent by one client can be forwarded on to all other clients.
 
 Every Youtube player has a custom slider with a play / pause button. Whenever the play or pause button is pressed or the user seeks to a new position on the custom slider, a `videoControl` event is emitted indicating that a play or pause happened at the given position (or "progress") in the video. For simplicity, seeks and plays are treated as the same type of event - a seek to a new location is treated as a play from a different position, and every time you seek (even if the video was paused before), the video will play from the new position.
 
