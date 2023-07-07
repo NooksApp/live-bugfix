@@ -53,7 +53,7 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
 
     // set up handler to end video when page closes
     window.addEventListener("beforeunload", handleBeforeUnload);
-  }, []);
+  }, [handleBeforeUnload]);
 
   function playVideo() {
     player.current?.getInternalPlayer().playVideo();
