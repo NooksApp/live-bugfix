@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Box, Button, TextField } from "@mui/material";
 import { v4 as uuidv4 } from "uuid";
+import * as Api from "../Api";
 
 const CreateSession: React.FC = () => {
   const navigate = useNavigate();
   const [newUrl, setNewUrl] = useState("");
 
   const createSession = async () => {
-    setNewUrl("");
+    // setNewUrl("");
     const sessionId = uuidv4();
+    await Api.createVideo(sessionId, newUrl);
     navigate(`/watch/${sessionId}`);
   };
 

@@ -5,19 +5,32 @@ import { Box, Button, TextField, Tooltip } from "@mui/material";
 import LinkIcon from "@mui/icons-material/Link";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import VideoLibraryIcon from "@mui/icons-material/VideoLibrary";
+import io from "socket.io-client";
+import * as Api from "../Api";
+
+const socket = io("http://localhost:3050");
 
 const WatchSession: React.FC = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const [url, setUrl] = useState<string | null>(null);
-
   const [linkCopied, setLinkCopied] = useState(false);
 
   useEffect(() => {
-    // load video by session ID -- right now we just hardcode a constant video but you should be able to load the video associated with the session
-    setUrl("https://www.youtube.com/watch?v=NX1eKLReSpY");
+    async function fetchVideo(sessionId?: string) {
+      if (!sessionId) {
+        navigate("/");
+        return;
+      }
+      const video = await Api.getVideo(sessionId);
+      if (!video) {
+        navigate("/");
+      } else {
+        setUrl(video.url);
+      }
+    }
 
-    // if session ID doesn't exist, you'll probably want to redirect back to the home / create session page
+    fetchVideo(sessionId);
   }, [sessionId]);
 
   if (!!url) {
@@ -78,7 +91,9 @@ const WatchSession: React.FC = () => {
             </Button>
           </Tooltip>
         </Box>
-        <VideoPlayer url={url} />;
+        {sessionId && (
+          <VideoPlayer url={url} socket={socket} sessionId={sessionId} />
+        )}
       </>
     );
   }

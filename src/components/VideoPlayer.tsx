@@ -1,54 +1,115 @@
-import { Box, Button, Card, IconButton, Stack } from "@mui/material";
-import React, { useRef, useState } from "react";
+import { Box, Button } from "@mui/material";
+import React, { useCallback, useRef, useState } from "react";
 import ReactPlayer from "react-player";
+import * as Api from "../Api";
+import { Socket } from "socket.io-client";
 
-interface VideoPlayerProps {
+const MIN_VIDEO_PROGRESS = 0;
+const MAX_VIDEO_PROGRESS = 0.999999;
+
+interface IVideoPlayerProps {
   url: string;
-  hideControls?: boolean;
+  sessionId: string;
+  socket: Socket;
 }
 
-const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
+interface IVideoControlProps {
+  type: "PLAY" | "PAUSE";
+  progress: number;
+}
+
+const VideoPlayer: React.FC<IVideoPlayerProps> = ({
+  url,
+  socket,
+  sessionId,
+}) => {
   const [hasJoined, setHasJoined] = useState(false);
   const [isReady, setIsReady] = useState(false);
+  const [playingVideo, setPlayingVideo] = useState(false);
+  const [seeking, setSeeking] = useState(false);
+  const [played, setPlayed] = useState(0);
+
   const player = useRef<ReactPlayer>(null);
+  const [users, setUsers] = useState<Set<String>>(new Set());
+
+  const handleBeforeUnload = useCallback(
+    (event: BeforeUnloadEvent) => {
+      if (users.size <= 1) Api.endVideo(sessionId);
+    },
+    [users, sessionId]
+  );
+
+  React.useEffect(() => {
+    // join session on init
+    socket.emit("joinSession", sessionId, (response: { users: String[] }) => {
+      setUsers(new Set(response.users));
+    });
+
+    // set up handler to end video when page closes
+    window.addEventListener("beforeunload", handleBeforeUnload);
+  }, []);
+
+  function playVideo() {
+    player.current?.getInternalPlayer().playVideo();
+  }
+
+  function pauseVideo() {
+    player.current?.getInternalPlayer().pauseVideo();
+  }
+
+  function seekToVideo(progress: number) {
+    player.current?.seekTo(progress);
+  }
+
+  function playVideoAtProgress(progress: number) {
+    seekToVideo(progress);
+    playVideo();
+    setPlayingVideo(true);
+  }
+
+  function pauseVideoAtProgress(progress: number) {
+    seekToVideo(progress);
+    pauseVideo();
+    setPlayingVideo(false);
+  }
 
   const handleReady = () => {
     setIsReady(true);
   };
 
-  const handleEnd = () => {
-    console.log("Video ended");
+  const handlePlayPause = () => {
+    if (playingVideo) {
+      socket!.emit("videoControl", sessionId, {
+        type: "PAUSE",
+        progress: played,
+      });
+      pauseVideo();
+    } else {
+      socket!.emit("videoControl", sessionId, {
+        type: "PLAY",
+        progress: played,
+      });
+      playVideo();
+    }
+    setPlayingVideo(!playingVideo);
   };
 
-  const handleSeek = (seconds: number) => {
-    // Ideally, the seek event would be fired whenever the user moves the built in Youtube video slider to a new timestamp.
-    // However, the youtube API no longer supports seek events (https://github.com/cookpete/react-player/issues/356), so this no longer works
-
-    // You'll need to find a different way to detect seeks (or just write your own seek slider and replace the built in Youtube one.)
-    // Note that when you move the slider, you still get play, pause, buffer, and progress events, can you use those?
-
-    console.log(
-      "This never prints because seek decetion doesn't work: ",
-      seconds
-    );
+  const handleSeekMouseDown = () => {
+    setSeeking(true);
   };
 
-  const handlePlay = () => {
-    console.log(
-      "User played video at time: ",
-      player.current?.getCurrentTime()
-    );
+  const handleSeekChange = (e: any) => {
+    setPlayed(parseFloat(e.target.value));
   };
 
-  const handlePause = () => {
-    console.log(
-      "User paused video at time: ",
-      player.current?.getCurrentTime()
-    );
-  };
-
-  const handleBuffer = () => {
-    console.log("Video buffered");
+  const handleSeekMouseUp = (e: any) => {
+    setSeeking(false);
+    const progress = parseFloat(e.target.value);
+    socket!.emit("videoControl", sessionId, {
+      type: "PLAY",
+      progress: progress,
+    });
+    playVideoAtProgress(progress);
   };
 
   const handleProgress = (state: {
@@ -57,7 +118,62 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
     loaded: number;
     loadedSeconds: number;
   }) => {
-    console.log("Video progress: ", state);
+    if (!seeking) {
+      setPlayed(state.played === 1 ? MAX_VIDEO_PROGRESS : state.played);
+    }
+  };
+
+  const handleWatchStart = async () => {
+    const lastVideoEvent = await Api.getLastVideoControl(sessionId);
+
+    if (lastVideoEvent.type === "PLAY") {
+      // Need to calculate how much time has elapsed from when the "PLAY" event has fired
+      // to know where to start the video at
+      const newVideoProgress = Math.min(
+        MAX_VIDEO_PROGRESS,
+        lastVideoEvent.progress +
+          (Date.now() - lastVideoEvent.createdAt) /
+            (player.current?.getDuration()! * 1000)
+      );
+      playVideoAtProgress(newVideoProgress);
+      setPlayed(newVideoProgress);
+    } else if (lastVideoEvent.type === "PAUSE") {
+      pauseVideoAtProgress(lastVideoEvent.progress);
+      setPlayed(lastVideoEvent.progress);
+    } else if (lastVideoEvent.type === "END") {
+      // the video has ended, can start
+      handlePlayPause();
+    }
+
+    // register to listen to video control events from socket
+    socket.on(
+      "videoControl",
+      (senderId: string, control: IVideoControlProps) => {
+        if (control.type === "PLAY") {
+          playVideoAtProgress(control.progress);
+          setPlayed(control.progress);
+        } else if (control.type === "PAUSE") {
+          pauseVideoAtProgress(control.progress);
+          setPlayed(control.progress);
+        }
+      }
+    );
+
+    socket.on("userJoined", (userId: string) => {
+      setUsers((users) => {
+        users.add(userId);
+        return users;
+      });
+    });
+
+    socket.on("userLeft", (userId: string) => {
+      setUsers((users) => {
+        users.delete(userId);
+        return users;
+      });
+    });
+
+    setHasJoined(true);
   };
 
   return (
@@ -78,19 +194,33 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
         <ReactPlayer
           ref={player}
           url={url}
-          playing={hasJoined}
-          controls={!hideControls}
+          playing={false}
+          controls={false}
           onReady={handleReady}
-          onEnded={handleEnd}
-          onSeek={handleSeek}
-          onPlay={handlePlay}
-          onPause={handlePause}
-          onBuffer={handleBuffer}
           onProgress={handleProgress}
           width="100%"
           height="100%"
-          style={{ pointerEvents: hideControls ? "none" : "auto" }}
+          style={{ pointerEvents: "none" }}
         />
+        <div>
+          <button
+            style={{ display: "block" }}
+            onClick={() => handlePlayPause()}
+          >
+            {playingVideo ? "Pause" : "Play"}
+          </button>
+          <input
+            style={{ display: "block", width: "100%" }}
+            type="range"
+            min={MIN_VIDEO_PROGRESS}
+            max={MAX_VIDEO_PROGRESS}
+            step="any"
+            value={played}
+            onMouseDown={() => handleSeekMouseDown()}
+            onChange={(e) => handleSeekChange(e)}
+            onMouseUp={(e) => handleSeekMouseUp(e)}
+          />
+        </div>
       </Box>
       {!hasJoined && isReady && (
         // Youtube doesn't allow autoplay unless you've interacted with the page already
@@ -99,7 +229,7 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({ url, hideControls }) => {
         <Button
           variant="contained"
           size="large"
-          onClick={() => setHasJoined(true)}
+          onClick={() => handleWatchStart()}
         >
           Watch Session
         </Button>
