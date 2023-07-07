@@ -10,6 +10,10 @@ The backend keeps track of all the video control events for a session in memory,
 
 If no one is left in the session, the last user to leave emits an "END" video control event that resets the video state to the initial position, so that the video won't keep playing in the background with no one watching.
 
+## Recommended Reading Order
+
+`server/src/app.ts` - has most of the driving server logic that implements the functionality of the collaborative watch party
+`src/VideoPlayer.ts` - makes API calls to the server and listens to socket events to control the users progress through the video
 
 
 ## How to Run Locally
