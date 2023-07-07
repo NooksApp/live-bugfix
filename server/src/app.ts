@@ -122,7 +122,8 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     console.log(`User ${socket.id} has disconnected`);
     // Remove the user from all sessions they were in
-    for (const [sessionId, users] of sessions) {
+    for (const [sessionId, sessionState] of sessionData) {
+      const { users } = sessionState;
       if (users.delete(socket.id)) {
         socket.leave(sessionId);
         io.to(sessionId).emit("userLeft", socket.id, [...users]);

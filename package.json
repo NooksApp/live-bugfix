@@ -28,7 +28,7 @@
   },
   "scripts": {
     "deps": "npm i && cd server && npm i",
-    "start:server": "cd server && node app.js",
+    "start:server": "cd server && npx ts-node src/app.ts",
     "start:client": "react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
