@@ -12,7 +12,7 @@ If no one is left in the session, the last user to leave emits an "END" video co
 
 ## Recommended Reading Order
 
-`server/src/app.ts` - has most of the driving server logic that implements the functionality of the collaborative watch party
+`server/src/app.ts` - has all the server logic that implements the watch party collaboration functionality
 
 `src/VideoPlayer.ts` - makes API calls to the server and listens to socket events to control the users progress through the video
 
