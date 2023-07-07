@@ -1,6 +1,6 @@
 ## System Overview
 
-This is a simple implementation of a collaborative Youtube Watch Party, backed by a socket.io backend that broadcasts video.
+This is a simple implementation of a collaborative Youtube Watch Party, backed by a socket.io backend that enables users to send messages to each other via a server in real time.
 
 When a user creates a session via the `/create` page, they get a unique session ID and a shareable link that they can use to have other clients join that session. This unique session ID is used as a "room" in the socket server, where any messages sent by one client can be forwarded on to all other clients.
 
