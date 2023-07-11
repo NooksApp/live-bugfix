@@ -35,12 +35,74 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
 
   React.useEffect(() => {
     // join session on init
+    handleJoinSession();
+  }, []);
+
+  const handleJoinSession = () => {
     socket.emit("joinSession", sessionId, (response: JoinSessionResponse) => {
       console.log("Response after joining session: ", response);
       setUrl(response.videoUrl);
       setUsers(new Set(response.users));
     });
-  }, []);
+  };
+
+  const handleWatchStart = async () => {
+    await joinLateToTheParty();
+
+    // register to listen to video control events from socket
+    socket.on(
+      "videoControl",
+      (senderId: string, control: IVideoControlProps) => {
+        if (control.type === "PLAY") {
+          playVideoAtProgress(control.progress);
+          setPlayed(control.progress);
+        } else if (control.type === "PAUSE") {
+          pauseVideoAtProgress(control.progress);
+          setPlayed(control.progress);
+        }
+      }
+    );
+
+    socket.on("userJoined", (userId: string) => {
+      setUsers((users) => {
+        users.add(userId);
+        return users;
+      });
+    });
+
+    socket.on("userLeft", (userId: string) => {
+      setUsers((users) => {
+        users.delete(userId);
+        return users;
+      });
+    });
+
+    setHasJoined(true);
+  };
+
+  const joinLateToTheParty = async () => {
+    const lastVideoEvent = await Api.getLastVideoEvent(sessionId);
+
+    // When joining late to the party
+    if (lastVideoEvent.type === "PLAY") {
+      // Need to calculate how much time has elapsed since "PLAY" event fired
+      // to know where to start the video at
+      const newVideoProgress = Math.min(
+        MAX_VIDEO_PROGRESS,
+        lastVideoEvent.progress +
+          (Date.now() - lastVideoEvent.createdAt) /
+            (player.current?.getDuration()! * 1000)
+      );
+      playVideoAtProgress(newVideoProgress);
+      setPlayed(newVideoProgress);
+    } else if (lastVideoEvent.type === "PAUSE") {
+      pauseVideoAtProgress(lastVideoEvent.progress);
+      setPlayed(lastVideoEvent.progress);
+    } else {
+      // no video events yet or session was ended, just start video normally from beginning
+      handlePlayPause();
+    }
+  };
 
   React.useEffect(() => {
     const handleBeforeUnload = () => {
@@ -126,60 +188,6 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
     if (!seeking) {
       setPlayed(state.played === 1 ? MAX_VIDEO_PROGRESS : state.played);
     }
-  };
-
-  const handleWatchStart = async () => {
-    const lastVideoEvent = await Api.getLastVideoEvent(sessionId);
-
-    // When joining late to the party
-    if (lastVideoEvent.type === "PLAY") {
-      // Need to calculate how much time has elapsed since "PLAY" event fired
-      // to know where to start the video at
-      const newVideoProgress = Math.min(
-        MAX_VIDEO_PROGRESS,
-        lastVideoEvent.progress +
-          (Date.now() - lastVideoEvent.createdAt) /
-            (player.current?.getDuration()! * 1000)
-      );
-      playVideoAtProgress(newVideoProgress);
-      setPlayed(newVideoProgress);
-    } else if (lastVideoEvent.type === "PAUSE") {
-      pauseVideoAtProgress(lastVideoEvent.progress);
-      setPlayed(lastVideoEvent.progress);
-    } else {
-      // no video events yet or session was ended, just start video normally from beginning
-      handlePlayPause();
-    }
-
-    // register to listen to video control events from socket
-    socket.on(
-      "videoControl",
-      (senderId: string, control: IVideoControlProps) => {
-        if (control.type === "PLAY") {
-          playVideoAtProgress(control.progress);
-          setPlayed(control.progress);
-        } else if (control.type === "PAUSE") {
-          pauseVideoAtProgress(control.progress);
-          setPlayed(control.progress);
-        }
-      }
-    );
-
-    socket.on("userJoined", (userId: string) => {
-      setUsers((users) => {
-        users.add(userId);
-        return users;
-      });
-    });
-
-    socket.on("userLeft", (userId: string) => {
-      setUsers((users) => {
-        users.delete(userId);
-        return users;
-      });
-    });
-
-    setHasJoined(true);
   };
 
   return (
