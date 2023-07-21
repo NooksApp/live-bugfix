@@ -4,7 +4,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Box, Button, TextField, Tooltip } from "@mui/material";
 import LinkIcon from "@mui/icons-material/Link";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
-import VideoLibraryIcon from "@mui/icons-material/VideoLibrary";
 import io from "socket.io-client";
 
 const socket = io("http://localhost:3050");
