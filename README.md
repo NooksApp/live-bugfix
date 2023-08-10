@@ -1,3 +1,7 @@
+## Bug Report
+
+Here is the customer bug report: https://www.loom.com/share/fd1075ce1ce74a95a07c3a6673f152db
+
 ## System Overview
 
 This is a simple implementation of a collaborative Youtube Watch Party, backed by a socket.io backend that enables users to send messages to each other via our server in real time.
