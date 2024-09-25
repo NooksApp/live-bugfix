@@ -1,6 +1,6 @@
-## Bug Report
+## Watch Party Functionality
 
-Here is the customer bug report: https://www.loom.com/share/fd1075ce1ce74a95a07c3a6673f152db
+Here is a demo of how the watch party works: https://www.loom.com/share/c6bb194d55b749919a308e7c5fd89521
 
 ## System Overview
 
@@ -10,24 +10,20 @@ When a user creates a session via the `/create` page, they get a unique session 
 
 Every Youtube player has a custom slider with a play / pause button. Whenever the play or pause button is pressed or the user seeks to a new position on the custom slider, a `videoControl` event is emitted indicating that a play or pause happened at the given position in the video. For simplicity, seeks and plays are treated as the same type of event - a seek to a new location is treated as a play from a different position, and every time you seek (even if the video was paused before), the video will play from the new position.
 
-The backend keeps track of all the video control events for a session in memory, along with the epoch time that they were initiated. If the video is already playing, users who are late to the party compute where in the video they should jump to by computing the time elapsed since the most recent play event.
+## Instructions
 
-If no one is left in the session, the last user to leave emits an "END" video control event that resets the video state to the initial position, so that the video won't keep playing in the background with no one watching.
+1. There is a significant bug in this implementation of a collaborative watch party. Find the bug.
+2. Figure out the best strategy to fix the bug and implement the fix!
 
 ## Recommended Reading Order
 
 `server/src/app.ts` - has all the server logic that implements the watch party collaboration functionality
-
 `src/VideoPlayer.ts` - makes API calls to the server and listens to socket events to control the users progress through the video
-
 
 ## How to Run Locally
 
 - Make sure nodeJS (I am using v19.7.0) and npm is installed on your local machine
 - Open a terminal and run install dependencies
   `$ npm run deps`
-- In your terminal at project root, start server
-  `$ npm run start:server`
-- In another terminal at project root, start client
-  `$ npm run start:client`
-
+- In your terminal at project root, start the server and the client simultaneously
+  `$ npm run start`

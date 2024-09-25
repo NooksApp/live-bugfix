@@ -1,7 +1,6 @@
 import { Box, Button } from "@mui/material";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import ReactPlayer from "react-player";
-import * as Api from "../Api";
 import { Socket } from "socket.io-client";
 
 const MIN_VIDEO_PROGRESS = 0;
@@ -31,24 +30,17 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
   const [played, setPlayed] = useState(0);
 
   const player = useRef<ReactPlayer>(null);
-  const [users, setUsers] = useState<Set<String>>(new Set());
 
   React.useEffect(() => {
     // join session on init
-    handleJoinSession();
-  }, []);
 
-  const handleJoinSession = () => {
     socket.emit("joinSession", sessionId, (response: JoinSessionResponse) => {
       console.log("Response after joining session: ", response);
       setUrl(response.videoUrl);
-      setUsers(new Set(response.users));
     });
-  };
+  }, []);
 
   const handleWatchStart = async () => {
-    await joinLateToTheParty();
-
     // register to listen to video control events from socket
     socket.on(
       "videoControl",
@@ -63,58 +55,8 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
       }
     );
 
-    socket.on("userJoined", (userId: string) => {
-      setUsers((users) => {
-        users.add(userId);
-        return users;
-      });
-    });
-
-    socket.on("userLeft", (userId: string) => {
-      setUsers((users) => {
-        users.delete(userId);
-        return users;
-      });
-    });
-
     setHasJoined(true);
   };
-
-  const joinLateToTheParty = async () => {
-    const lastVideoEvent = await Api.getLastVideoEvent(sessionId);
-
-    // When joining late to the party
-    if (lastVideoEvent.type === "PLAY") {
-      // Need to calculate how much time has elapsed since "PLAY" event fired
-      // to know where to start the video at
-      const newVideoProgress = Math.min(
-        MAX_VIDEO_PROGRESS,
-        lastVideoEvent.progress +
-          (Date.now() - lastVideoEvent.createdAt) /
-            (player.current?.getDuration()! * 1000)
-      );
-      playVideoAtProgress(newVideoProgress);
-      setPlayed(newVideoProgress);
-    } else if (lastVideoEvent.type === "PAUSE") {
-      pauseVideoAtProgress(lastVideoEvent.progress);
-      setPlayed(lastVideoEvent.progress);
-    } else {
-      // no video events yet or session was ended, just start video normally from beginning
-      handlePlayPause();
-    }
-  };
-
-  React.useEffect(() => {
-    const handleBeforeUnload = () => {
-      if (users.size <= 1) {
-        Api.endSession(sessionId);
-      }
-    };
-
-    // set up handler to end video when page closes
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
-  }, [users, sessionId]);
 
   function playVideo() {
     player.current?.getInternalPlayer().playVideo();
@@ -241,7 +183,6 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
       {!hasJoined && isReady && (
         // Youtube doesn't allow autoplay unless you've interacted with the page already
         // So we make the user click "Join Session" button and then start playing the video immediately after
-        // This is necessary so that when people join a session, they can seek to the same timestamp and start watching the video with everyone else
         <Button
           variant="contained"
           size="large"
