@@ -17,7 +17,7 @@ Every Youtube player has a custom slider with a play / pause button. Whenever th
 
 ## Recommended Reading Order
 
-`server/src/app.ts` - has all the server logic that implements the watch party collaboration functionality
+`server/main.py` - has all the server logic that implements the watch party collaboration functionality
 `src/VideoPlayer.ts` - makes API calls to the server and listens to socket events to control the users progress through the video
 
 ## How to Run Locally
@@ -25,5 +25,8 @@ Every Youtube player has a custom slider with a play / pause button. Whenever th
 - Make sure nodeJS (I am using v19.7.0) and npm is installed on your local machine
 - Open a terminal and run install dependencies
   `$ npm run deps`
-- In your terminal at project root, start the server and the client simultaneously
-  `$ npm run start`
+  `$ pip install -r server/requirements.txt`
+- In your terminal at project root, start the client
+  `$ npm run start:client`
+- In your terminal at project root, start the server
+  `$ python3 server/main.py`
