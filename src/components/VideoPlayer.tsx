@@ -1,5 +1,5 @@
 import { Box, Button } from "@mui/material";
-import React, { useRef, useState } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import ReactPlayer from "react-player";
 import { Socket } from "socket.io-client";
 
@@ -18,7 +18,8 @@ interface IVideoControlProps {
 
 interface JoinSessionResponse {
   videoUrl: string;
-  users: String[];
+  progress: number;
+  isPlaying: boolean; // Add this line
 }
 
 const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
@@ -26,36 +27,58 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
   const [hasJoined, setHasJoined] = useState(false);
   const [isReady, setIsReady] = useState(false);
   const [playingVideo, setPlayingVideo] = useState(false);
-  const [seeking, setSeeking] = useState(false);
   const [played, setPlayed] = useState(0);
 
   const player = useRef<ReactPlayer>(null);
 
-  React.useEffect(() => {
-    // join session on init
-
+  useEffect(() => {
     socket.emit("joinSession", sessionId, (response: JoinSessionResponse) => {
       console.log("Response after joining session: ", response);
       setUrl(response.videoUrl);
+      setPlayed(response.progress);
+      setPlayingVideo(response.isPlaying); // Use the isPlaying property
     });
   }, []);
 
-  const handleWatchStart = async () => {
-    // register to listen to video control events from socket
+  useEffect(() => {
     socket.on(
       "videoControl",
-      (senderId: string, control: IVideoControlProps) => {
-        if (control.type === "PLAY") {
-          playVideoAtProgress(control.progress);
-          setPlayed(control.progress);
-        } else if (control.type === "PAUSE") {
-          pauseVideoAtProgress(control.progress);
-          setPlayed(control.progress);
+      ({
+        userId,
+        videoControl,
+      }: {
+        userId: string;
+        videoControl: IVideoControlProps;
+      }) => {
+        console.log("Received video control event: ", userId, videoControl);
+        if (videoControl.type === "PLAY") {
+          playVideoAtProgress(videoControl.progress);
+        } else if (videoControl.type === "PAUSE") {
+          pauseVideoAtProgress(videoControl.progress);
         }
+        setPlayed(videoControl.progress);
       }
     );
 
+    return () => {
+      socket.off("videoControl");
+    };
+  }, [socket]);
+
+  useEffect(() => {
+    console.log("Played: ", played);
+  }, [played]);
+
+  const handleWatchStart = async () => {
     setHasJoined(true);
+    console.log("Played: ", played);
+    if (played > 0) {
+      console.log("Played: ", played);
+      seekToVideo(played);
+      if (playingVideo) {
+        playVideo();
+      }
+    }
   };
 
   function playVideo() {
@@ -67,7 +90,7 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
   }
 
   function seekToVideo(progress: number) {
-    player.current?.seekTo(progress);
+    player.current?.seekTo(progress, "fraction");
   }
 
   function playVideoAtProgress(progress: number) {
@@ -103,33 +126,17 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
     setPlayingVideo(!playingVideo);
   };
 
-  const handleSeekMouseDown = () => {
-    setSeeking(true);
-  };
-
   const handleSeekChange = (e: any) => {
     setPlayed(parseFloat(e.target.value));
   };
 
   const handleSeekMouseUp = (e: any) => {
-    setSeeking(false);
     const progress = parseFloat(e.target.value);
     socket!.emit("videoControl", sessionId, {
       type: "PLAY",
       progress: progress,
     });
     playVideoAtProgress(progress);
-  };
-
-  const handleProgress = (state: {
-    played: number;
-    playedSeconds: number;
-    loaded: number;
-    loadedSeconds: number;
-  }) => {
-    if (!seeking) {
-      setPlayed(state.played === 1 ? MAX_VIDEO_PROGRESS : state.played);
-    }
   };
 
   return (
@@ -151,10 +158,9 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
           <ReactPlayer
             ref={player}
             url={url}
-            playing={false}
+            playing={playingVideo}
             controls={false}
             onReady={handleReady}
-            onProgress={handleProgress}
             width="100%"
             height="100%"
             style={{ pointerEvents: "none" }}
@@ -173,7 +179,6 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
               max={MAX_VIDEO_PROGRESS}
               step="any"
               value={played}
-              onMouseDown={() => handleSeekMouseDown()}
               onChange={(e) => handleSeekChange(e)}
               onMouseUp={(e) => handleSeekMouseUp(e)}
             />
