@@ -39,6 +39,10 @@ async def connect(sid, environ):
 @sio.event
 async def disconnect(sid):
     print(f"Client disconnected: {sid}")
+    for sessionId, session in session_manager.sessions.items():
+        if sid in session.users:
+            session.users.remove(sid)
+            await sio.emit('userLeft', {'userId': sid, 'users': list(session.users)}, room=sessionId)
 
 @sio.event
 async def joinSession(sid, sessionId):
@@ -46,11 +50,17 @@ async def joinSession(sid, sessionId):
     if not session:
         return {'error': 'Session not found'}
 
+    await sio.enter_room(sid, sessionId)
+    session.users.add(sid)
+
+    await sio.emit('userJoined', {'userId': sid, 'users': list(session.users)}, room=sessionId, skip_sid=sid)
+
     last_event = session_manager.get_last_event(sessionId)
     return {
         'videoUrl': session.video_url,
+        'users': list(session.users),
         'progress': last_event.progress if last_event else 0,
-        'isPlaying': last_event.type == "PLAY" if last_event else False
+        'isPlaying': last_event.type == "PLAY" if last_event else False  # Add this line
     }
 
 @sio.event
@@ -67,7 +77,7 @@ async def videoControl(sid, *args):
     if sessionId and videoControl:
         session_manager.add_event(sessionId, videoControl['type'], videoControl['progress'])
         print(f"Broadcasting videoControl: sessionId={sessionId}, videoControl={videoControl}")
-        await sio.emit('videoControl', {'videoControl': videoControl}, room=sessionId, skip_sid=sid)
+        await sio.emit('videoControl', {'userId': sid, 'videoControl': videoControl}, room=sessionId, skip_sid=sid)
     else:
         print(f"Invalid data for videoControl event: sessionId={sessionId}, videoControl={videoControl}")
 

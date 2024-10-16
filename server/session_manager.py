@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, Set, List
 
 class VideoControlEvent:
     def __init__(self, type: str, progress: float):
@@ -8,6 +8,7 @@ class VideoControlEvent:
 class Session:
     def __init__(self, video_url: str):
         self.video_url = video_url
+        self.users: Set[str] = set()
         self.events: List[VideoControlEvent] = []
 
 class SessionManager:
@@ -19,6 +20,19 @@ class SessionManager:
 
     def get_session(self, sessionId: str) -> Session:
         return self.sessions.get(sessionId)
+
+    def add_user_to_session(self, sessionId: str, user_id: str):
+        if session := self.get_session(sessionId):
+            session.users.add(user_id)
+
+    def remove_user_from_session(self, sessionId: str, user_id: str):
+        if session := self.get_session(sessionId):
+            session.users.discard(user_id)
+
+    def get_user_ids(self, sessionId: str) -> list[str]:
+        if session := self.get_session(sessionId):
+            return list(session.users)
+        return []
 
     def add_event(self, sessionId: str, event_type: str, progress: float):
         if session := self.get_session(sessionId):
