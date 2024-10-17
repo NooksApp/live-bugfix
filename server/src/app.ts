@@ -23,19 +23,17 @@ const io = new Server(server, {
 app.use(cors());
 
 type VideoControlEvent = {
-  type: "PLAY" | "PAUSE" | "END";
+  type: "PLAY" | "PAUSE";
   progress: number;
-  createdAt: number;
 };
 
 type SessionProps = {
   videoUrl: string;
   users: Set<string>;
-  lastVideoControlEvent?: VideoControlEvent;
+  events: VideoControlEvent[];
 };
 
 const sessionData = new Map<string, SessionProps>();
-const sessions = new Map();
 
 // Creates a new session with a URL
 app.post("/session", async (req, res) => {
@@ -43,35 +41,9 @@ app.post("/session", async (req, res) => {
   sessionData.set(sessionId, {
     videoUrl: url,
     users: new Set(),
+    events: [],
   });
   res.sendStatus(201);
-});
-
-// Gets the last video control event from a session (for joining late)
-app.get("/session/:sessionId/lastVideoEvent", async (req, res) => {
-  const { sessionId } = req.params;
-
-  const lastEvent = sessionData.get(sessionId)?.lastVideoControlEvent;
-
-  // If there is no recent event, send undefined so the frontend knows to play from start
-  res.send(lastEvent).status(200);
-});
-
-// Ends a live session
-app.post("/session/:sessionId/end", async (req, res) => {
-  const { sessionId } = req.params;
-  const currentSession = sessionData.get(sessionId);
-
-  if (!currentSession) return;
-
-  // Write an "END" event so the video doesn't keep playing when last user leaves the page
-  currentSession.lastVideoControlEvent = {
-    type: "END",
-    progress: 0,
-    createdAt: Date.now(),
-  };
-
-  res.sendStatus(200);
 });
 
 io.on("connection", (socket) => {
@@ -86,18 +58,20 @@ io.on("connection", (socket) => {
     currentSession.users.add(socket.id);
     socket.join(sessionId);
 
-    // Broadcast to all users in the session that a new user has joined
-    io.to(sessionId).emit("userJoined", socket.id, [...currentSession.users]);
+    const lastEvent = currentSession.events[currentSession.events.length - 1];
 
     // Return the session's data to the user that just joined
-    callback({
+    const responseData = {
       videoUrl: currentSession.videoUrl,
-      users: [...currentSession.users],
-    });
+      progress: lastEvent?.progress ?? 0,
+      isPlaying: lastEvent?.type === "PLAY" ?? false,
+    };
+    console.log(`Sending session state to user ${socket.id}:`, responseData);
+    callback(responseData);
   });
 
   // Handle video control events from the client
-  socket.on("videoControl", (sessionId, videoControl) => {
+  socket.on("videoControl", (sessionId, videoControl: VideoControlEvent) => {
     console.log(
       `Received video control from client ${socket.id} in session ${sessionId}:`,
       videoControl
@@ -107,12 +81,8 @@ io.on("connection", (socket) => {
 
     if (!currentSession) return;
 
-    // Store last event (needed for late to the party)
-    currentSession.lastVideoControlEvent = {
-      type: videoControl.type,
-      progress: videoControl.progress,
-      createdAt: Date.now(),
-    };
+    // Store the event in the session
+    currentSession.events.push(videoControl);
 
     // Broadcast the video control event to all watchers in the session except the sender
     socket.to(sessionId).emit("videoControl", socket.id, videoControl);
@@ -126,7 +96,6 @@ io.on("connection", (socket) => {
       const { users } = sessionState;
       if (users.delete(socket.id)) {
         socket.leave(sessionId);
-        io.to(sessionId).emit("userLeft", socket.id, [...users]);
       }
     }
   });
