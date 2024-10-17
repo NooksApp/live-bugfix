@@ -28,8 +28,8 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "deps": "npm i && cd server && npm i",
-    "start:server": "cd server && npx ts-node src/app.ts",
+    "deps": "npm i && cd server && python3 -m pip install -r requirements.txt",
+    "start:server": "cd server && python3 main.py",
     "start:client": "react-scripts start",
     "start": "concurrently \"npm run start:server\" \"npm run start:client\"",
     "build": "react-scripts build",

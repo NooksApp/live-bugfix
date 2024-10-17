@@ -23,10 +23,8 @@ Every Youtube player has a custom slider with a play / pause button. Whenever th
 ## How to Run Locally
 
 - Make sure nodeJS (I am using v19.7.0) and npm is installed on your local machine
-- Open a terminal and run install dependencies
+- Make sure python3 (I am using 3.11.10) is installed on your local machine
+- Open a terminal and run install dependencies (optionally create a new Python virtual environment first)
   `$ npm run deps`
-  `$ pip install -r server/requirements.txt`
-- In your terminal at project root, start the client
-  `$ npm run start:client`
-- In your terminal at project root, start the server
-  `$ python3 server/main.py`
+- In your terminal at project root, start the client and server
+  `$ npm run start`
