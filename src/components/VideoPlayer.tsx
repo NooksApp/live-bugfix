@@ -3,9 +3,6 @@ import React, { useRef, useState, useEffect } from "react";
 import ReactPlayer from "react-player";
 import { Socket } from "socket.io-client";
 
-const MIN_VIDEO_PROGRESS = 0;
-const MAX_VIDEO_PROGRESS = 0.999999;
-
 interface IVideoPlayerProps {
   sessionId: string;
   socket: Socket;
@@ -71,9 +68,8 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
 
   const handleWatchStart = async () => {
     setHasJoined(true);
-    console.log("Played: ", played);
+    console.log("On watch start: ", played);
     if (played > 0) {
-      console.log("Played: ", played);
       seekToVideo(played);
       if (playingVideo) {
         playVideo();
@@ -90,7 +86,7 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
   }
 
   function seekToVideo(progress: number) {
-    player.current?.seekTo(progress, "fraction");
+    player.current?.seekTo(progress, "seconds");
   }
 
   function playVideoAtProgress(progress: number) {
@@ -107,6 +103,14 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
 
   const handleReady = () => {
     setIsReady(true);
+  };
+
+  const handleEnded = () => {
+    socket!.emit("videoControl", sessionId, {
+      type: "PAUSE",
+      progress: played,
+    });
+    pauseVideo();
   };
 
   const handlePlayPause = () => {
@@ -161,6 +165,7 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
             playing={playingVideo}
             controls={false}
             onReady={handleReady}
+            onEnded={handleEnded}
             width="100%"
             height="100%"
             style={{ pointerEvents: "none" }}
@@ -175,8 +180,8 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
             <input
               style={{ display: "block", width: "100%" }}
               type="range"
-              min={MIN_VIDEO_PROGRESS}
-              max={MAX_VIDEO_PROGRESS}
+              min={0}
+              max={player.current?.getDuration() ?? 1}
               step="any"
               value={played}
               onChange={(e) => handleSeekChange(e)}
