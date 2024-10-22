@@ -29,3 +29,4 @@ If you'd prefer to work with a backend written entirely in Python (same frontend
   `$ npm run deps`
 - In your terminal at project root, start the server and the client simultaneously
   `$ npm run start`
+- Unfortunately the node backend will not restart automatically when you make changes to the code, so you will need to restart the server manually if you want to see your changes take effect.
