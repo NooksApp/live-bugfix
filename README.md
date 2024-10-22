@@ -2,6 +2,8 @@
 
 Here is a demo of how the watch party works: https://www.loom.com/share/c6bb194d55b749919a308e7c5fd89521
 
+Here is the customer's bug report: https://www.loom.com/share/b5dc95868b8840e1bbfe89523c53ff59
+
 ## System Overview
 
 This is a simple implementation of a collaborative Youtube Watch Party, backed by a socket.io backend that enables users to send messages to each other via our server in real time.
