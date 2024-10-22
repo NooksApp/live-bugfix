@@ -28,3 +28,4 @@ Every Youtube player has a custom slider with a play / pause button. Whenever th
   `$ npm run deps`
 - In your terminal at project root, start the client and server
   `$ npm run start`
+- Unfortunately the python backend will not restart automatically when you make changes to the code, so you will need to restart the server manually if you want to see your changes take effect.
