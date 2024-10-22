@@ -108,9 +108,9 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
   const handleEnded = () => {
     socket!.emit("videoControl", sessionId, {
       type: "PAUSE",
-      progress: played,
+      progress: 0,
     });
-    pauseVideo();
+    pauseVideoAtProgress(0);
   };
 
   const handlePlayPause = () => {
