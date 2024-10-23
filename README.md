@@ -2,6 +2,8 @@
 
 Here is a demo of how the watch party works: https://www.loom.com/share/c6bb194d55b749919a308e7c5fd89521
 
+Here is the customer's bug report: https://www.loom.com/share/b5dc95868b8840e1bbfe89523c53ff59
+
 ## System Overview
 
 This is a simple implementation of a collaborative Youtube Watch Party, backed by a socket.io backend that enables users to send messages to each other via our server in real time.
@@ -13,7 +15,7 @@ Every Youtube player has a custom slider with a play / pause button. Whenever th
 ## Instructions
 
 1. There is a significant bug in this implementation of a collaborative watch party. This bug can be replicated with just two people in the session. Find the bug.
-2. Figure out the best strategy to fix the bug (should only require modifying backend code) and implement the fix!
+2. Figure out the best strategy to fix the bug and implement the fix!
 
 ## Recommended Reading Order
 
