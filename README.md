@@ -15,7 +15,7 @@ Every Youtube player has a custom slider with a play / pause button. Whenever th
 ## Instructions
 
 1. There is a significant bug in this implementation of a collaborative watch party. This bug can be replicated with just two people in the session. Find the bug.
-2. Figure out the best strategy to fix the bug (should only require modifying backend code) and implement the fix!
+2. Figure out the best strategy to fix the bug and implement the fix!
 
 ## Recommended Reading Order
 

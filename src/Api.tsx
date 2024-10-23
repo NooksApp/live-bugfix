@@ -35,3 +35,14 @@ export const createSession = async (
     throw error;
   }
 };
+
+export const getSession = async (
+  sessionId: string
+): Promise<{ data: { videoUrl: string } }> => {
+  try {
+    return await apiClient.get(`/session/${sessionId}`);
+  } catch (error) {
+    console.error("Error creating video:", error);
+    throw error;
+  }
+};

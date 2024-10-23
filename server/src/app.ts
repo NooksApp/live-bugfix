@@ -46,6 +46,18 @@ app.post("/session", async (req, res) => {
   res.sendStatus(201);
 });
 
+// Gets a session's data
+app.get("/session/:sessionId", (req, res) => {
+  const { sessionId } = req.params;
+  const session = sessionData.get(sessionId);
+
+  if (!session) {
+    return res.status(404).json({ error: "Session not found" });
+  }
+
+  res.json({ videoUrl: session.videoUrl });
+});
+
 io.on("connection", (socket) => {
   console.log(`A user has connected with socket id ${socket.id}`);
 
