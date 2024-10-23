@@ -38,6 +38,12 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
   }, []);
 
   useEffect(() => {
+    if (playingVideo && !!url && !!player.current?.getInternalPlayer() && !hasJoined) {
+      handleWatchStart();
+    }
+  }, [played, playingVideo, url, player.current?.getInternalPlayer()]); // Triggers when user is joining late and video is already playing. Waits for player to initialize, otherwise plays on a black screen.
+
+  useEffect(() => {
     socket.on(
       "videoControl",
       (userId: string, videoControl: IVideoControlProps) => {
@@ -111,13 +117,13 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
     if (playingVideo) {
       socket!.emit("videoControl", sessionId, {
         type: "PAUSE",
-        progress: played,
+        progress: player.current?.getCurrentTime(),
       });
       pauseVideo();
     } else {
       socket!.emit("videoControl", sessionId, {
         type: "PLAY",
-        progress: played,
+        progress: player.current?.getCurrentTime(),
       });
       playVideo();
     }
@@ -184,7 +190,7 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
           </div>
         </Box>
       )}
-      {!hasJoined && isReady && (
+      {!hasJoined && isReady && !playingVideo && (
         // Youtube doesn't allow autoplay unless you've interacted with the page already
         // So we make the user click "Join Session" button and then start playing the video immediately after
         <Button
