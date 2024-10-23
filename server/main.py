@@ -32,6 +32,14 @@ async def create_session(session: SessionCreate):
     session_manager.create_session(session.sessionId, session.url)
     return {"status": "created"}
 
+@app.get("/session/{session_id}")
+async def get_session(session_id: str):
+    session = session_manager.get_session(session_id)
+    if not session:
+        return {"error": "Session not found"}
+    return {"videoUrl": session.video_url}
+
+
 @sio.event
 async def connect(sid, environ):
     print(f"Client connected: {sid}")

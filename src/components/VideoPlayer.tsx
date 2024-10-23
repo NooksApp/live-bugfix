@@ -3,13 +3,14 @@ import React, { useRef, useState, useEffect } from "react";
 import ReactPlayer from "react-player";
 import { Socket } from "socket.io-client";
 
-interface IVideoPlayerProps {
-  sessionId: string;
+interface VideoPlayerProps {
   socket: Socket;
+  sessionId: string;
+  url: string;
 }
 
 interface IVideoControlProps {
-  type: "PLAY" | "PAUSE" | "END";
+  type: "PLAY" | "PAUSE";
   progress: number;
 }
 
@@ -19,23 +20,17 @@ interface JoinSessionResponse {
   isPlaying: boolean; // Add this line
 }
 
-const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
-  const [url, setUrl] = useState<string | null>(null);
-  const [hasJoined, setHasJoined] = useState(false);
+const VideoPlayer: React.FC<VideoPlayerProps> = ({
+  socket,
+  sessionId,
+  url,
+}) => {
   const [isReady, setIsReady] = useState(false);
+  const [hasJoined, setHasJoined] = useState(false);
   const [playingVideo, setPlayingVideo] = useState(false);
   const [played, setPlayed] = useState(0);
 
   const player = useRef<ReactPlayer>(null);
-
-  useEffect(() => {
-    socket.emit("joinSession", sessionId, (response: JoinSessionResponse) => {
-      console.log("Response after joining session: ", response);
-      setUrl(response.videoUrl);
-      setPlayed(response.progress);
-      setPlayingVideo(response.isPlaying); // Use the isPlaying property
-    });
-  }, []);
 
   useEffect(() => {
     socket.on(
@@ -67,14 +62,18 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
   }, [played]);
 
   const handleWatchStart = async () => {
-    setHasJoined(true);
-    console.log("On watch start: ", played);
-    if (played > 0) {
-      seekToVideo(played);
-      if (playingVideo) {
-        playVideo();
+    socket.emit("joinSession", sessionId, (response: JoinSessionResponse) => {
+      setHasJoined(true);
+      console.log("Received join session response: ", response);
+      if (response.progress > 0) {
+        seekToVideo(response.progress);
+        if (response.isPlaying) {
+          playVideo();
+        }
+        setPlayed(response.progress);
+        setPlayingVideo(response.isPlaying);
       }
-    }
+    });
   };
 
   function playVideo() {
@@ -190,7 +189,7 @@ const VideoPlayer: React.FC<IVideoPlayerProps> = ({ socket, sessionId }) => {
           </div>
         </Box>
       )}
-      {!hasJoined && isReady && (
+      {isReady && !hasJoined && (
         // Youtube doesn't allow autoplay unless you've interacted with the page already
         // So we make the user click "Join Session" button and then start playing the video immediately after
         <Button

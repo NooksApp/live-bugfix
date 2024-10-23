@@ -5,6 +5,7 @@ import { Box, Button, TextField, Tooltip } from "@mui/material";
 import LinkIcon from "@mui/icons-material/Link";
 import AddCircleOutlineIcon from "@mui/icons-material/AddCircleOutline";
 import io from "socket.io-client";
+import * as Api from "../Api";
 
 const socket = io("http://localhost:3050");
 
@@ -12,6 +13,20 @@ const WatchSession: React.FC = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
   const [linkCopied, setLinkCopied] = useState(false);
+  const [sessionData, setSessionData] = useState<{ videoUrl: string } | null>(
+    null
+  );
+
+  useEffect(() => {
+    const fetchSessionData = async () => {
+      if (sessionId) {
+        const response = await Api.getSession(sessionId);
+        setSessionData(response.data);
+      }
+    };
+
+    fetchSessionData();
+  }, [sessionId]);
 
   return (
     <>
@@ -26,7 +41,7 @@ const WatchSession: React.FC = () => {
         <TextField
           label="Youtube URL"
           variant="outlined"
-          value={""}
+          value={sessionData?.videoUrl || ""}
           inputProps={{
             readOnly: true,
             disabled: true,
@@ -59,7 +74,13 @@ const WatchSession: React.FC = () => {
           </Button>
         </Tooltip>
       </Box>
-      {sessionId && <VideoPlayer socket={socket} sessionId={sessionId} />}
+      {sessionId && sessionData && (
+        <VideoPlayer
+          socket={socket}
+          sessionId={sessionId}
+          url={sessionData.videoUrl}
+        />
+      )}
     </>
   );
 };
