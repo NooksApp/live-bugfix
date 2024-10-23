@@ -116,13 +116,13 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     if (playingVideo) {
       socket!.emit("videoControl", sessionId, {
         type: "PAUSE",
-        progress: played,
+        progress: player.current?.getCurrentTime(),
       });
       pauseVideo();
     } else {
       socket!.emit("videoControl", sessionId, {
         type: "PLAY",
-        progress: played,
+        progress: player.current?.getCurrentTime(),
       });
       playVideo();
     }
