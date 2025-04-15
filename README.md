@@ -22,7 +22,7 @@ Every Youtube player has a custom slider with a play / pause button. Whenever th
 `server/src/app.ts` - has all the server logic that implements the watch party collaboration functionality
 `src/VideoPlayer.ts` - makes API calls to the server and listens to socket events to control the users progress through the video
 
-If you'd prefer to work with a backend written entirely in Python (same frontend code) - check out the `nikhil/python-version` branch instead.
+If you'd prefer to work with a backend written entirely in Python (same frontend code) - check out the `python-backend` branch instead.
 
 ## How to Run Locally
 
