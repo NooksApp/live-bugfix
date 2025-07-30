@@ -35,7 +35,12 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
   console.log("VideoPlayer: ", url);
 
   useEffect(() => {
-    if (playingVideo && !!url && !!player.current?.getInternalPlayer() && !hasJoined) {
+    if (
+      playingVideo &&
+      !!url &&
+      !!player.current?.getInternalPlayer() &&
+      !hasJoined
+    ) {
       handleWatchStart();
     }
   }, [played, playingVideo, url, player.current?.getInternalPlayer()]); // Triggers when user is joining late and video is already playing. Waits for player to initialize, otherwise plays on a black screen.
@@ -67,13 +72,16 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
     socket.emit("joinSession", sessionId, (response: JoinSessionResponse) => {
       setHasJoined(true);
       console.log("Received join session response: ", response);
+
       if (response.progress > 0) {
         seekToVideo(response.progress);
-        if (response.isPlaying) {
-          playVideo();
-        }
-        setPlayed(response.progress);
-        setPlayingVideo(response.isPlaying);
+      }
+      setPlayed(response.progress);
+      setPlayingVideo(response.isPlaying);
+
+      // Start playing if the session is currently playing
+      if (response.isPlaying) {
+        playVideo();
       }
     });
   };

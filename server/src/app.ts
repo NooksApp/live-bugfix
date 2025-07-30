@@ -76,7 +76,7 @@ io.on("connection", (socket) => {
     const responseData = {
       videoUrl: currentSession.videoUrl,
       progress: lastEvent?.progress ?? 0,
-      isPlaying: lastEvent?.type === "PLAY" ?? false,
+      isPlaying: lastEvent ? lastEvent.type === "PLAY" : false,
     };
     console.log(`Sending session state to user ${socket.id}:`, responseData);
     callback(responseData);
