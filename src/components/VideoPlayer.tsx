@@ -79,7 +79,6 @@ const VideoPlayer: React.FC<VideoPlayerProps> = ({
       setPlayed(response.progress);
       setPlayingVideo(response.isPlaying);
 
-      // Start playing if the session is currently playing
       if (response.isPlaying) {
         playVideo();
       }
